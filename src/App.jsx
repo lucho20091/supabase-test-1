@@ -6,28 +6,17 @@ export default function App() {
   const [texts, setTexts] = useState([]);
   const [session, setSession] = useState(null);
 
-  const fetchText = async () => {
+  const fetchTexts = async () => {
     const { data, error } = await supabase
       .from("texts")
       .select("*")
       .order("created_at", { ascending: true });
-
-    console.log(data);
-    console.log(error);
-
     if (error) {
       console.error("Error fetching texts:", error.message);
       return;
     }
-
     setTexts(data || []);
   };
-
-  useEffect(() => {
-    if (session) {
-      fetchText();
-    }
-  }, [session]);
 
   const fetchSession = async () => {
     const { data, error } = await supabase.auth.getSession();
@@ -36,40 +25,6 @@ export default function App() {
       return;
     }
     setSession(data.session);
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!text.trim()) return;
-
-    const { data, error } = await supabase
-      .from("texts")
-      .insert({
-        text,
-        email: session?.user?.email || "unknown",
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error("Error inserting text:", error.message);
-      return;
-    }
-
-    setText("");
-    // update local state immediately
-    setTexts((prev) => [...prev, data]);
-  };
-
-  const signInWithGoogle = async () => {
-    await supabase.auth.signInWithOAuth({
-      provider: "google",
-    });
-  };
-
-  const signOut = async () => {
-    await supabase.auth.signOut();
-    setSession(null);
   };
 
   useEffect(() => {
@@ -85,6 +40,44 @@ export default function App() {
       authListener.subscription.unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    if (session) {
+      fetchTexts();
+    }
+  }, [session]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!text.trim()) return;
+    const { data, error } = await supabase
+      .from("texts")
+      .insert({
+        text,
+        email: session?.user?.email || "unknown",
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error inserting text:", error.message);
+      return;
+    }
+
+    setText("");
+    setTexts((prev) => [...prev, data]);
+  };
+
+  const signInWithGoogle = async () => {
+    await supabase.auth.signInWithOAuth({
+      provider: "google",
+    });
+  };
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    setSession(null);
+  };
 
   return (
     <div className="grid place-items-center h-svh">
